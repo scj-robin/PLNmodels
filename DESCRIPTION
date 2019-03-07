@@ -50,6 +50,7 @@ Suggests:
     testthat,
     covr,
     pkgdown
+Remotes: r-lib/vdiffr
 VignetteBuilder: knitr
 Collate: 
     'PLNfit-class.R'
