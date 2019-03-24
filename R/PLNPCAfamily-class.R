@@ -16,6 +16,11 @@
 #' @include PLNfamily-class.R
 #' @importFrom R6 R6Class
 #' @import ggplot2
+#' @examples
+#' data(trichoptera)
+#' trichoptera <- prepare_data(trichoptera$Abundance, trichoptera$Covariate)
+#' myPCAs <- PLNPCA(Abundance ~ 1 + offset(log(Offset)), data = trichoptera, ranks = 1:5)
+#' class(myPCAs)
 #' @seealso The function \code{\link{PLNPCA}}, the class \code{\link[=PLNPCAfit]{PLNPCAfit}}
 PLNPCAfamily <-
   R6Class(classname = "PLNPCAfamily",
@@ -83,8 +88,8 @@ function() {
   super$show()
   cat(" Task: Principal Component Analysis\n")
   cat("========================================================\n")
-  cat(" - Ranks considered: from", min(self$ranks), "to", max(self$ranks),"\n")
-  cat(" - Best model (greater BIC): rank =", self$getBestModel("BIC")$rank, "- R2 =", round(self$getBestModel("BIC")$R_squared, 2), "\n")
-  cat(" - Best model (greater ICL): rank =", self$getBestModel("ICL")$rank, "- R2 =", round(self$getBestModel("ICL")$R_squared, 2), "\n")
+  cat(" - Ranks considered: from ", min(self$ranks), " to ", max(self$ranks),"\n", sep = "")
+  cat(" - Best model (greater BIC): rank = ", self$getBestModel("BIC")$rank, " - R2 = ", round(self$getBestModel("BIC")$R_squared, 2), "\n", sep = "")
+  cat(" - Best model (greater ICL): rank = ", self$getBestModel("ICL")$rank, " - R2 = ", round(self$getBestModel("ICL")$R_squared, 2), "\n", sep = "")
 })
 

@@ -22,6 +22,12 @@
 #' @field scores a matrix of scores to plot the individual factor maps
 #' @include PLNfit-class.R
 #' @importFrom R6 R6Class
+#' @examples
+#' data(trichoptera)
+#' trichoptera <- prepare_data(trichoptera$Abundance, trichoptera$Covariate)
+#' myPLNLDA <- PLNLDA(Abundance ~ 1, grouping = Group, data = trichoptera)
+#' class(myPLNLDA)
+#' print(myPLNLDA)
 #' @seealso The function \code{\link{PLNLDA}}.
 PLNLDAfit <-
   R6Class(classname = "PLNLDAfit",
@@ -132,7 +138,10 @@ PLNLDAfit$set("public", "plot_correlation_map",
     invisible(p)
 })
 
+
 # Plot a summary of the current \code{PLNLDAfit} object
+#' @importFrom gridExtra grid.arrange arrangeGrob
+#' @importFrom grid nullGrob textGrob
 PLNLDAfit$set("public", "plot_LDA",
   function(nb_axes = min(3, self$rank), var_cols = "default", plot = TRUE) {
 
@@ -222,8 +231,10 @@ PLNLDAfit$set("public", "predict",
     ## Initialize priors
     if (is.null(prior)) {
       prior <- table(private$grouping)
+    } else {
+      names(prior) <- groups
     }
-    if (any(prior < 0) && anyNA(prior)) stop("Prior group proportions should be positive.")
+    if (any(prior <= 0) || anyNA(prior)) stop("Prior group proportions should be positive.")
     prior <- prior / sum(prior)
 
     ## Compute conditional log-likelihoods of new data, using previously estimated parameters
@@ -282,7 +293,7 @@ PLNLDAfit$set("public", "show",
 function() {
   super$show(paste0("Linear Discriminant Analysis for Poisson Lognormal distribution\n"))
   cat("* Additional fields for LDA\n")
-  cat("    $percent_var, $corr_map, $scores, $group_means \n")
+  cat("    $percent_var, $corr_map, $scores, $group_means\n")
   cat("* Additional S3 methods for LDA\n")
   cat("    plot.PLNLDAfit(), predict.PLNLDAfit()\n")
 })

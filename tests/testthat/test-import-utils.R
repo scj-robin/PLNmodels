@@ -219,7 +219,7 @@ test_that("offset_numeric fails when the offsets are incompatible with the count
   )
 })
 
-test_that("offset_numeric works for vectors or column-matrices.", {
+test_that("offset_numeric works for vectors and column-matrices.", {
   #   a b
   # A 1 4
   # B 2 5
@@ -227,6 +227,9 @@ test_that("offset_numeric works for vectors or column-matrices.", {
   counts <- structure(1:6, .Dim = 3:2, .Dimnames = list(c("A", "B", "C"),
                                                         c("a", "b")))
   offset <- c(A = 1, C = 3, B = 2)
+  ## No difference between vectors and column matrices
+  expect_equal(offset_numeric(counts, offset),
+               offset_numeric(counts, as.matrix(offset)))
   ##  Correct dimensions
   expect_equal(dim(offset_numeric(counts, offset)),
                dim(counts))
@@ -285,29 +288,54 @@ test_that("prepare_data succeeds on simple data", {
 
 test_that("prepare_data succeeds on simple data with missing names", {
   expect_warning(res <- prepare_data(`rownames<-`(counts, NULL),
-                                         covariates, offset = "none"))
+                                     covariates, offset = "none"))
   expect_identical(res,
                    ## small hack to account for the fact that setting rownames via rownames<-
                    ## changes its mode to character
                    `rownames<-`(result, rownames(result))
-                   )
+  )
 })
 
-test_that("prepare_data succeeds on simple data when specifying a numeric offset", {
+test_that("prepare_data succeeds on simple data with missing names and numeric offset", {
+  expect_warning(res <- prepare_data(`rownames<-`(counts, NULL),
+                                     covariates,
+                                     offset = rowSums(counts)))
+  expect_equal(dim(res$Offset), dim(counts))
+  expect_equal(rownames(res$Offset), as.character(1:nrow(res)))
+  expect_equal(colnames(res$Offset), colnames(counts))
+})
+
+test_that("prepare_data provides automatic variable names when missing from covariate", {
+  res <- prepare_data(counts, unname(covariates))
+  expect_identical(colnames(res),
+                   c("Abundance", paste0("Variable", 1:ncol(covariates)), "Offset"))
+})
+
+test_that("prepare_data succeeds when specifying a numeric offset", {
+  ## On simple data
   res <- prepare_data(counts, covariates, offset = "TSS")
   res$Offset <- matrix(rep(res$Offset, ncol(counts)),
                        ncol = ncol(counts),
                        dimnames = dimnames(counts))
   expect_identical(prepare_data(counts, covariates, offset = rowSums(counts)),
                    res)
+  ## On strange data (transposed count matrix)
+  expect_identical(prepare_data(t(counts), covariates, offset = rowSums(counts)),
+                   res)
 })
 
 ## Test prepare_data_* functions ------------------------------------------------------------------------
 
-
 test_that("prepare_data_from_biom fails when covariates data.frame is missing", {
   biom <- biomformat::make_biom(data = t(counts), sample_metadata = NULL)
   expect_error(prepare_data_from_biom(biom, offset = "none"))
+})
+
+test_that("prepare_data_from_biom succeeds on biom specified by file name.", {
+  biom_file <- system.file("extdata", "rich_sparse_otu_table.biom", package = "biomformat")
+  biom <- biomformat::read_biom(biom_file)
+  expect_equal(prepare_data_from_biom(biom_file),
+               prepare_data_from_biom(biom))
 })
 
 test_that("prepare_data_from_biom succeeds on proper biom objects (but converts all columns to character...)", {
@@ -324,8 +352,21 @@ test_that("prepare_data_from_biom succeeds on proper biom objects (but converts 
 rownames(counts) <- rownames(covariates) <- paste0("Sample", 1:nrow(covariates))
 
 test_that("prepare_data_from_phyloseq fails when covariate data.frame is missing", {
-  physeq <- phyloseq::phyloseq(otu_table(counts, taxa_are_rows = FALSE))
-  expect_error(prepare_data_from_phyloseq(physeq, offset = "none"))
+  physeq <- phyloseq::phyloseq(phyloseq::otu_table(counts, taxa_are_rows = FALSE))
+  expect_error(prepare_data_from_phyloseq(physeq, offset = "none"),
+               "physeq should be a phyloseq object.")
+  physeq <- phyloseq::phyloseq(
+    phyloseq::otu_table(counts, taxa_are_rows = FALSE),
+    phyloseq::tax_table(matrix(rep("", ncol(counts)),
+                               dimnames = list(colnames(counts), "Kingdom")))
+  )
+  expect_error(prepare_data_from_phyloseq(physeq, offset = "none"),
+               paste("No covariates detected in physeq Consider:",
+                     "- extracting count data from biom with as(otu_table(physeq), \"matrix\")",
+                     "- preparing a covariates data.frame",
+                     "- using prepare_data instead of prepare_data_from_phyloseq",
+                     sep = "\n"),
+               fixed = TRUE)
 })
 
 test_that("prepare_data_from_phyloseq succeeds on proper phyloseq class objects", {

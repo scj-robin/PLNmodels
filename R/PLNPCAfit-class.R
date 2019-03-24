@@ -23,6 +23,13 @@
 #' @field rotation a matrix of rotation of the latent space
 #' @include PLNfit-class.R
 #' @importFrom R6 R6Class
+#' @examples
+#' data(trichoptera)
+#' trichoptera <- prepare_data(trichoptera$Abundance, trichoptera$Covariate)
+#' myPCAs <- PLNPCA(Abundance ~ 1 + offset(log(Offset)), data = trichoptera, ranks = 1:5)
+#' myPCA <- getBestModel(myPCAs)
+#' class(myPCA)
+#' print(myPCA)
 #' @seealso The function \code{\link{PLNPCA}}, the class \code{\link[=PLNPCAfamily]{PLNPCAfamily}}
 PLNPCAfit <-
   R6Class(classname = "PLNPCAfit",
@@ -172,7 +179,7 @@ PLNPCAfit$set("public", "plot_correlation_circle",
 })
 
 #' @importFrom gridExtra grid.arrange arrangeGrob
-#' @importFrom grid textGrob
+#' @importFrom grid textGrob nullGrob
 PLNPCAfit$set("public", "plot_PCA",
   function(nb_axes = min(3, self$rank), ind_cols = "ind_cols", var_cols = "var_cols", plot = TRUE) {
 
@@ -238,13 +245,13 @@ PLNPCAfit$set("public", "plot_PCA",
 )
 
 # Compute the (one-data) Fisher information matrix of Theta using one of two approximations scheme.
-PLNPCAfit$set("private", "compute_fisher",
+PLNPCAfit$set("public", "compute_fisher",
   function(type = c("wald", "louis"), X = NULL) {
     type = match.arg(type)
     if (type == "louis") {
-      stop("Louis approximation scheme not available yet for object of class PLNPLCA, use `type = \"wald\"' instead.")
+      stop("Louis approximation scheme not available yet for object of class PLNPLCA, use type = \"wald\" instead.")
     }
-    super$fisher(type = "wald", X = X)
+    super$compute_fisher(type = "wald", X = X)
   }
 )
 
@@ -252,7 +259,7 @@ PLNPCAfit$set("public", "show",
 function() {
   super$show(paste0("Poisson Lognormal with rank constrained for PCA (rank = ",self$rank,")\n"))
   cat("* Additional fields for PCA\n")
-  cat("    $percent_var, $corr_circle, $scores, $rotation \n")
+  cat("    $percent_var, $corr_circle, $scores, $rotation\n")
   cat("* Additional S3 methods for PCA\n")
-  cat("    plot.PLNPCAfit() \n")
+  cat("    plot.PLNPCAfit()\n")
 })

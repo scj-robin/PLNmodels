@@ -8,9 +8,10 @@ mollusc <- suppressWarnings(
   prepare_data(mollusk$Abundance, mollusk$Covariate)
 )
 
-test_that("PLNnetwork methods", {
+test_that("PLNnetwork: main function, fields access and methods", {
 
   models <- PLNnetwork(Abundance ~ 1, data = trichoptera)
+  expect_equal(getBestModel(models), getBestModel(models, "BIC"))
 
   X <- model.matrix(Abundance ~ 1, data = trichoptera)
   Y <- as.matrix(trichoptera$Abundance)
@@ -32,7 +33,28 @@ test_that("PLNnetwork methods", {
   myPLN$postTreatment()
 
   expect_equivalent(myPLN, models)
-  ## add some
+
+  ## S3 methods
+  expect_true(PLNmodels:::isPLNnetworkfamily(myPLN))
+  expect_is(plot(myPLN), "ggplot")
+  expect_is(getBestModel(myPLN), "PLNnetworkfit")
+  expect_is(getModel(myPLN, myPLN$penalties[1]), "PLNnetworkfit")
+
+  ## Field access
+  expect_true(all(myPLN$penalties > 0))
+  expect_null(myPLN$stability_path)
+  expect_true(anyNA(myPLN$stability))
+
+  ## Other R6 methods
+  expect_true(is.data.frame(myPLN$coefficient_path()))
+  subs <- replicate(2,
+                    sample.int(nrow(trichoptera), size = nrow(trichoptera)/2),
+                    simplify = FALSE)
+  myPLN$stability_selection(subsamples = subs)
+  expect_true(!is.null(myPLN$stability_path))
+  expect_true(inherits(myPLN$plot(), "ggplot"))
+  expect_true(inherits(myPLN$plot_objective(), "ggplot"))
+  expect_true(inherits(myPLN$plot_stars(), "ggplot"))
 })
 
 test_that("PLNnetwork computes the stability path only once.", {

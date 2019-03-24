@@ -42,8 +42,6 @@ common_samples <- function(counts, covariates) {
   ## Based on a heuristic of matching names
   sample_are_cols <- any(colnames(counts) %in% rownames(covariates))
   if (sample_are_cols) counts <- t(counts)
-  sample_are_rows <- any(rownames(counts) %in% rownames(covariates))
-  if (!sample_are_rows) stop("No matching samples in abundance matrix and covariates data.frame, please check the input.")
   ## Ensure consistency by using only common samples
   common_samples <- intersect(rownames(counts), rownames(covariates))
   if (length(common_samples) < nrow(counts)) {
@@ -61,9 +59,14 @@ sanitize_offset <- function(counts, offset, ...) {
   p <- ncol(counts) ## number of features
   ## Sanity check: transform vector offset and column-matrices to full matrices
   if (is.vector(offset) || (is.matrix(offset) && ncol(offset) == 1)) {
+    offset_samples <- if (is.vector(offset)) {
+      names(offset)
+    } else {
+      rownames(offset)
+    }
     offset <- matrix(rep(offset, p),
                      ncol = p,
-                     dimnames = list(names(offset), colnames(counts)))
+                     dimnames = list(offset_samples, colnames(counts)))
   }
   ## Sanity check: rownames
   if (is.null(rownames(offset))) {
@@ -134,7 +137,8 @@ offset_rle <- function(counts, pseudocounts = 0) {
   geom_means <- counts %>% log() %>% colMeans(na.rm = TRUE) %>% exp
   if (all(geom_means == 0)) stop("Sample do not share any common species, RLE normalization failed.")
   ## compute size factor as the median of all otus log-ratios in that sample
-  size_factor <- apply(counts, 1, function(x) {median(x / geom_means, na.rm = TRUE)} )
+  robust_med <- function(cnts) { median((cnts/geom_means)[is.finite(geom_means) & cnts > 0]) }
+  size_factor <- apply(counts, 1, robust_med)
   if (any(is.infinite(size_factor) | size_factor == 0)) warning("Because of high sparsity, some samples have null or infinite offset.")
   return(size_factor)
 }
@@ -217,16 +221,11 @@ prepare_data <- function(counts, covariates, offset = "TSS", ...) {
   ## sanitize abundance matrix and covariates data.frame
   common <- common_samples(counts, covariates)
   samples <- common$common_samples
-  if (common$transpose_counts) {
-    counts <- t(counts)
-    ## sanitize offset
-    if (is.numeric(offset)) {
-      if (is.vector(offset)) {
-        offset <- matrix(offset, nrow = 1, dimnames = list(names(offset), NULL))
-      }
-      offset <- t(offset)
-    }
+  ## sanitize offset
+  if (is.numeric(offset) && is.vector(offset)) {
+    offset <- matrix(offset, ncol = 1, dimnames = list(names(offset), NULL))
   }
+  if (common$transpose_counts) counts <- t(counts)
   if (common$default_names) {
     rownames(counts) <- rownames(covariates) <- samples
     if (is.numeric(offset)) rownames(offset) <- samples

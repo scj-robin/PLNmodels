@@ -24,6 +24,12 @@
 #' @field criteria a vector with loglik, BIC, ICL, R_squared and number of parameters
 #' @include PLNfit-class.R
 #' @importFrom R6 R6Class
+#' @examples
+#' data(trichoptera)
+#' trichoptera <- prepare_data(trichoptera$Abundance, trichoptera$Covariate)
+#' myPLN <- PLN(Abundance ~ 1, data = trichoptera)
+#' class(myPLN)
+#' print(myPLN)
 PLNfit <-
    R6Class(classname = "PLNfit",
     public = list(
@@ -131,7 +137,7 @@ function(responses, covariates, offsets, weights, model, control) {
     if (control$covariance == "spherical") {
       private$Sigma <- diag(crossprod(private$M)/n)
     } else  {
-      private$Sigma <- crossprod(private$M)/n + diag(colMeans(private$S))
+      private$Sigma <- crossprod(private$M)/n + diag(colMeans(private$S), nrow = p)
     }
   }
 
@@ -270,16 +276,20 @@ PLNfit$set("public", "compute_fisher",
   function(type = c("wald", "louis"), X = NULL) {
     type <- match.arg(type)
     A <- private$A
-    n <- self$n
     if (type == "louis") {
       ## TODO check how to adapt for PLNPCA
       ## A = A + A \odot A \odot (exp(S) - 1_{n \times p})
       A <- A + A * A * (exp(self$var_par$S) - 1)
     }
-    result <- bdiag(lapply(1:self$p, function(i) {
-      ## t(X) %*% diag(A[, i]) %*% X
-      crossprod(X, A[, i] * X)
-    }))
+    if (anyNA(A)) {
+      warning("Something went wrong during model fitting!!\nMatrix A has missing values.")
+      result <- bdiag(lapply(1:self$p, function(i) {diag(NA, nrow = self$d)}))
+    } else {
+      result <- bdiag(lapply(1:self$p, function(i) {
+        ## t(X) %*% diag(A[, i]) %*% X
+        crossprod(X, A[, i] * X)
+      }))
+    }
     ## set proper names
     element.names <- expand.grid(covariates = colnames(private$Theta),
                                  species    = rownames(private$Theta)) %>% rev() %>%
@@ -321,11 +331,11 @@ PLNfit$set("public", "show",
 function(model = paste("A multivariate Poisson Lognormal fit with", private$covariance, "covariance model.\n")) {
   cat(model)
   cat("==================================================================\n")
-  print(as.data.frame(self$criteria, row.names = ""))
+  print(as.data.frame(round(self$criteria, digits = 3), row.names = ""))
   cat("==================================================================\n")
-  cat("* Useful fields \n")
-  cat("    $model_par, $latent, $var_par, $optim_par \n")
-  cat("    $loglik, $BIC, $ICL, $loglik_vec, $nb_param, $criteria \n")
+  cat("* Useful fields\n")
+  cat("    $model_par, $latent, $var_par, $optim_par\n")
+  cat("    $loglik, $BIC, $ICL, $loglik_vec, $nb_param, $criteria\n")
   cat("* Useful S3 methods\n")
   cat("    print(), coef(), vcov(), sigma(), fitted(), predict(), standard_error()\n")
 })

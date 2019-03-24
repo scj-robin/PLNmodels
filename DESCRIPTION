@@ -1,22 +1,23 @@
 Package: PLNmodels
 Title: Poisson Lognormal Models
-Version: 0.7.0.3-9000
+Version: 0.9.1
 Authors@R: c(
   person("Julien", "Chiquet", role = c("aut", "cre"), email = "julien.chiquet@inra.fr",
       comment = c(ORCID = "0000-0002-3629-3429")),
   person("Mahendra", "Mariadassou", role = "aut", email = "mahendra.mariadassou@inra.fr", 
       comment = c(ORCID = "0000-0003-2986-354X")),
-  person("Stéphane", "Robin", role ="ctb", email = "stephane.robininra.fr")
+  person("Stéphane", "Robin", role ="ctb", email = "stephane.robin@inra.fr")
   )
 Description: The Poisson-lognormal model and variants can be used for 
-    a variety of multivariate problems when count data are at play (including 
-    PCA for count data, discriminant analysis and network inference). This package 
-    implements efficient tvariational algorithms to fit such models accompanied with a set of
-    functions for visualization and diagnostic.
+    a variety of multivariate problems when count data are at play, including 
+    principal component analysis for count data (Chiquet, Mariadassou and Robin, 
+    2018 <doi:10.1214/18-AOAS1177>), discriminant analysis and 
+    network inference (Chiquet, Mariadassou and Robin, 2018 <arXiv:1806.03120>). 
+    Implements variational algorithms to fit such models accompanied with a set of 
+    functions for visualization and diagnostic. 
 URL: https://jchiquet.github.io/PLNmodels/
 BugReports: https://github.com/jchiquet/PLNmodels/issues
 License: GPL (>= 3)
-SystemRequirements: nlopt: libnlopt-dev (deb), NLopt-devel (rpm), nlopt (homebrew)
 Encoding: UTF-8
 RoxygenNote: 6.1.1
 Depends: R (>= 3.4)
@@ -30,6 +31,7 @@ Imports:
   glassoFast,
   Matrix,
   Rcpp,
+  nloptr (>= 1.2.0),
   igraph,
   grid,
   gridExtra,
@@ -48,6 +50,7 @@ Suggests:
     testthat,
     covr,
     pkgdown
+LinkingTo: Rcpp, RcppArmadillo, nloptr (>= 1.2.0)
 VignetteBuilder: knitr
 Collate: 
     'PLNfit-class.R'
@@ -76,4 +79,3 @@ Collate:
     'plot_utils.R'
     'trichoptera.R'
     'utils.R'
-LinkingTo: Rcpp, RcppArmadillo
