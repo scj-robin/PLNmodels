@@ -77,56 +77,65 @@ function(responses, covariates, offsets, weights, control) {
   cond <- FALSE; iter <- 0
   objective   <- numeric(control$maxit_out)
   convergence <- numeric(control$maxit_out)
+  inner_iterations <- integer(control$maxit_out)
+  inner_status     <- integer(control$maxit_out)
+  inner_message    <- character(control$maxit_out)
+
   ## start from the standard PLN at initialization
-  par0  <- c(private$M, private$S)
-  Sigma <- private$Sigma
-  Theta <- t(private$Theta)
+  par0 <- c(private$M, private$S)
   objective.old <- Inf
+  control$Theta <- t(self$model_par$Theta)
+  control$Omega <- solve(self$model_par$Sigma)
   while (!cond) {
     iter <- iter + 1
     if (control$trace > 1) cat("", iter)
 
-    ## CALL TO GLASSO TO UPDATE Omega/Sigma
-    glasso_out <- glassoFast::glassoFast(Sigma, rho = rho)
+    ## VE Step: CALL TO NLOPT OPTIMIZATION WITH BOX CONSTRAINT
+    if (control$trace > 1) cat(" E")
+    optim_out <- optim_sparse(par0, responses, covariates, offsets, weights, control)
+
+    ## M Step: CALL TO GLASSO TO UPDATE Omega/Sigma
+    if (control$trace > 1) cat("/M ")
+    glasso_out <- glassoFast::glassoFast(optim_out$Sigma, rho = rho)
     if (anyNA(glasso_out$wi)) break
     Omega  <- glasso_out$wi ; if (!isSymmetric(Omega)) Omega <- Matrix::symmpart(Omega)
-
-    ## CALL TO NLOPT OPTIMIZATION WITH BOX CONSTRAINT
-    control$Omega <- Omega
-    control$Theta <- Theta
-    optim.out <- optim_sparse(par0, responses, covariates, offsets, weights, control)
+    Sigma  <- glasso_out$w  ; if (!isSymmetric(Sigma)) Sigma <- Matrix::symmpart(Sigma)
 
     ## Check convergence
-    objective[iter]   <- -sum(weights * optim.out$loglik) + self$penalty * sum(abs(Omega))
+    objective[iter]   <- -sum(weights * optim_out$loglik) + self$penalty * sum(abs(Omega))
     convergence[iter] <- abs(objective[iter] - objective.old)/abs(objective[iter])
     if ((convergence[iter] < control$ftol_out) | (iter >= control$maxit_out)) cond <- TRUE
 
+    inner_iterations[iter] <- optim_out$iterations
+    inner_status[iter]     <- optim_out$status
+    inner_message[iter]    <- statusToMessage(optim_out$status)
+
     ## Prepare next iterate
-    par0  <- c(optim.out$M, optim.out$S)
-    Theta <- optim.out$Theta
-    Sigma <- optim.out$Sigma
+    par0  <- c(optim_out$M, optim_out$S)
     objective.old <- objective[iter]
+    control$Theta <- optim_out$Theta
+    control$Omega <- Omega
   }
 
   ## ===========================================
   ## OUTPUT
-  Ji <- optim.out$loglik
+  Ji <- optim_out$loglik
   attr(Ji, "weights") <- weights
   self$update(
-    Theta = t(Theta),
-    Omega = Omega,
-    Sigma = Sigma,
-    M = optim.out$M,
-    S = optim.out$S,
-    Z = optim.out$Z,
-    A = optim.out$A,
-    Ji = Ji,
+    Theta      = t(optim_out$Theta),
+    Omega      = Omega,
+    Sigma      = Sigma,
+    M          = optim_out$M,
+    S          = optim_out$S,
+    Z          = optim_out$Z,
+    A          = optim_out$A,
+    Ji         = Ji,
     monitoring = list(objective        = objective[1:iter],
                       convergence      = convergence[1:iter],
                       outer_iterations = iter,
-                      inner_iterations = optim.out$iterations,
-                      inner_status     = optim.out$status,
-                      inner_message    = statusToMessage(optim.out$status)))
+                      inner_iterations = optim_out$iterations,
+                      inner_status     = optim_out$status,
+                      inner_message    = statusToMessage(optim_out$status)))
 
 })
 

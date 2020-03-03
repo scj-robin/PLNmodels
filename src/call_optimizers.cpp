@@ -127,19 +127,22 @@ Rcpp::List optim_sparse (
     Rcpp::List options) {
 
   // Initialize
-  optimizer_PLN_full myPLN = optimizer_PLN_full(par, Y, X, O, w, options) ;
+  optimizer_PLN_sparse myPLN = optimizer_PLN_sparse(par, Y, X, O, w, options) ;
 
   // Perform the optimization
   myPLN.optimize() ;
 
   // Format the output
-  myPLN.export_sparse() ;
+  myPLN.export_output() ;
 
   // Output returned to R
   return(myPLN.get_output());
 }
 
-// function to perform a single VE Step
+// ---------------------------------------------------------------------------------------
+// VE Step
+//
+// function to perform a single VE Step in PLN model
 
 // [[Rcpp::export]]
 Rcpp::List VEstep_PLN(

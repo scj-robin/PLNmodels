@@ -143,3 +143,35 @@ double fn_optim_PLN_weighted_rank(unsigned N, const double *x, double *grad, voi
   return objective;
 }
 
+double fn_optim_PLN_sparse(unsigned N, const double *x, double *grad, void *data) {
+
+  optim_data *dat = (optim_data *) data;
+  dat->iterations++;
+
+  int n = dat->n, p = dat->p, d = dat->d ;
+
+  arma::mat M(&x[0]  , n,p);
+  arma::mat S(&x[n*p], n,p);
+  arma::mat Z = dat->O + M;
+  arma::mat A = exp (Z + .5 * S) ;
+
+  arma::mat XtWX_inv = arma::inv_sympd(dat->X.t() * arma::diagmat(dat->w) * dat->X) ;
+  arma::mat Theta = XtWX_inv * dat->X.t() * (M.each_col() % dat->w) ;
+  arma::mat mu = dat->X * Theta ;
+
+//  arma::mat mu = dat->X * dat->Theta ;
+  arma::mat nSigma =  (M-mu).t() * diagmat(dat->w) * (M-mu) + diagmat(sum(S.each_col() % dat->w, 0)) ;
+
+  double w_bar = accu(dat->w) ;
+  double objective = accu(diagmat(dat->w) * (A - dat->Y % Z - .5*log(S))) -.5*(w_bar*dat->log_det_Omega + w_bar*p - trace(dat->Omega*nSigma)) ;
+//double objective = accu((dat->w).t()*(A - dat->Y % Z - .5*log(S))) + .5*trace(dat->Omega*nSigma) ;
+
+//arma::vec grd_M = vectorise(diagmat(dat->w) * (M * dat->Omega + A - dat->Y));
+  arma::vec grd_M = vectorise(diagmat(dat->w) * ( (M - mu) * dat->Omega + A - dat->Y)) ;
+  arma::vec grd_S = vectorise(.5 * (dat->w * diagvec(dat->Omega).t() + diagmat(dat->w) * A - diagmat(dat->w) * pow(S,-1)));
+
+  stdvec grad_std = arma::conv_to<stdvec>::from(join_vert(grd_M, grd_S)) ;
+  for (unsigned int i=0;i<N;i++) grad[i] = grad_std[i];
+
+  return objective;
+}

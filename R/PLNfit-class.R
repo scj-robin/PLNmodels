@@ -165,16 +165,10 @@ function(responses, covariates, offsets, weights, control) {
   control$Omega <- solve(self$model_par$Sigma)
   while (!cond) {
     iter <- iter + 1
+    if (control$trace > 1) cat("", iter)
 
     ## VE Step
-    optim_out <- private$optimizer(
-      par0,
-      responses,
-      covariates,
-      offsets,
-      weights,
-      control
-    )
+    optim_out <- private$optimizer(par0, responses, covariates, offsets, weights, control)
 
     ## M Step
     control$Theta <- optim_out$Theta
