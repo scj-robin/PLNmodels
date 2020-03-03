@@ -16,8 +16,12 @@ plot(myLDA_tree, "individual")
 
 myLDA_tree_diagonal <- PLNLDA(Abundancies ~ 1 + offset(log(sequencingEffort)), grouping = oaks$treeStatus, data = oaks, control = list(covariance = "diagonal"))
 plot(myLDA_tree_diagonal)
+
+myLDA_tree_spherical <- PLNLDA(Abundancies ~ 1 + offset(log(sequencingEffort)), grouping = oaks$treeStatus, data = oaks, control = list(covariance = "spherical"))
+plot(myLDA_tree_spherical)
+
 otu.family <- factor(rep(c("fungi", "E. aphiltoides", "bacteria"), c(47, 1, 66)))
-plot(myLDA_tree, "variable", var_cols = otu.family) ## TODO: add color for arrows to check
+plot(myLDA_tree, "variable", var_cols = otu.family)
 
 ## One dimensional check of plot
 myLDA_orientation <- PLNLDA(Abundancies ~ 1 + offset(log(sequencingEffort)), grouping = oaks$orientation, data = oaks)
@@ -29,7 +33,7 @@ myPLNPCA <- getBestModel(myPLNPCAs)
 plot(myPLNPCA, ind_cols = oaks$treeStatus)
 
 ## Network inference with sparce covariance estimation
-myPLNnets <- PLNnetwork(Abundancies ~ 1 + treeStatus + offset(log(sequencingEffort)), data = oaks)
+system.time(myPLNnets <- PLNnetwork(Abundancies ~ 1 + treeStatus + offset(log(sequencingEffort)), data = oaks))
 stability_selection(myPLNnets, mc.cores = 10)
 plot(getBestModel(myPLNnets, "StARS", stability = .985))
 

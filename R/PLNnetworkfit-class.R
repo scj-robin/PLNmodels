@@ -78,9 +78,10 @@ function(responses, covariates, offsets, weights, control) {
   objective   <- numeric(control$maxit_out)
   convergence <- numeric(control$maxit_out)
   ## start from the standard PLN at initialization
-  par0  <- c(private$Theta, private$M, private$S)
+  par0  <- c(private$M, private$S)
   Sigma <- private$Sigma
-  objective.old <- -self$loglik
+  Theta <- t(private$Theta)
+  objective.old <- Inf
   while (!cond) {
     iter <- iter + 1
     if (control$trace > 1) cat("", iter)
@@ -92,7 +93,7 @@ function(responses, covariates, offsets, weights, control) {
 
     ## CALL TO NLOPT OPTIMIZATION WITH BOX CONSTRAINT
     control$Omega <- Omega
-    control$Theta <- matrix()
+    control$Theta <- Theta
     optim.out <- optim_sparse(par0, responses, covariates, offsets, weights, control)
 
     ## Check convergence
@@ -101,8 +102,9 @@ function(responses, covariates, offsets, weights, control) {
     if ((convergence[iter] < control$ftol_out) | (iter >= control$maxit_out)) cond <- TRUE
 
     ## Prepare next iterate
+    par0  <- c(optim.out$M, optim.out$S)
+    Theta <- optim.out$Theta
     Sigma <- optim.out$Sigma
-    par0  <- c(optim.out$Theta, optim.out$M, optim.out$S)
     objective.old <- objective[iter]
   }
 
@@ -111,9 +113,9 @@ function(responses, covariates, offsets, weights, control) {
   Ji <- optim.out$loglik
   attr(Ji, "weights") <- weights
   self$update(
-    Theta = optim.out$Theta,
+    Theta = t(Theta),
     Omega = Omega,
-    Sigma = optim.out$Sigma,
+    Sigma = Sigma,
     M = optim.out$M,
     S = optim.out$S,
     Z = optim.out$Z,
@@ -144,8 +146,8 @@ function(responses, covariates, offsets, weights, nullModel) {
 #
 PLNnetworkfit$set("public", "latent_pos",
 function(covariates, offsets) {
-  latentPos <- private$M + tcrossprod(covariates, private$Theta) + offsets
-#  latentPos <- private$M + offsets
+#  latentPos <- private$M + tcrossprod(covariates, private$Theta) + offsets
+  latentPos <- private$M + offsets
   latentPos
 })
 

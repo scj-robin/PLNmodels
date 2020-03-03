@@ -179,6 +179,26 @@ void optimizer_PLN_full::export_output () {
   loglik = sum(data.Y % Z - A + .5*log(S) - .5*( ((M - mu) * Omega) % (M - mu) + S * diagmat(Omega)), 1) + .5 * real(log_det(Omega)) + data.Ki ;
 }
 
+void optimizer_PLN_full::export_sparse () {
+
+  // variational parameters
+  M = arma::mat(&parameter[0]  , n,p);
+  S = arma::mat(&parameter[n*p], n,p);
+  Z = data.O + M;
+
+  // regression parameters
+  arma::mat XtWX_inv = arma::inv_sympd(data.X.t() * arma::diagmat(data.w) * data.X) ;
+  Theta = XtWX_inv * data.X.t() * (M.each_col() % data.w) ;
+  arma::mat mu = data.X * Theta ;
+
+  // variance parameters
+  Sigma = ((M - mu) .t() * diagmat(data.w) * (M - mu) + diagmat(sum(S.each_col() % data.w, 0))) / data.w_bar ;
+
+  // element-wise log-likelihood
+  A = exp (Z + .5 * S) ;
+  loglik = sum(data.Y % Z - A + .5*log(S) - .5*( ((M - mu) * data.Omega) % (M - mu) + S * diagmat(data.Omega)), 1) + .5 * real(log_det(data.Omega)) + data.Ki ;
+}
+
 void optimizer_PLN_full::export_var_par () {
 
   // variational parameters
@@ -250,40 +270,3 @@ Rcpp::List optimizer_PLN_rank::get_output() {
     );
 }
 
-// ---------------------------------------------------------------------------
-// CHILD CLASS WITH SPARSE INVERSE COVARIANCE
-
-optimizer_PLN_sparse::optimizer_PLN_sparse (
-  arma::vec par,
-  const arma::mat & Y,
-  const arma::mat & X,
-  const arma::mat & O,
-  const arma::vec & w,
-  Rcpp::List options
-) : optimizer_PLN(par, Y, X, O, w, options) {
-  if (Rcpp::as<bool>(options["weighted"])) {
-    fn_optim = &fn_optim_PLN_weighted_sparse ;
-  } else {
-    fn_optim = &fn_optim_PLN_sparse ;
-  }
-
-  const arma::mat & Omega = Rcpp::as<arma::mat>(options["Omega"]);
-
-  // overload the data structure
-  data = optim_data(Y, X, O, w, Omega) ;
-
-}
-
-void optimizer_PLN_sparse::export_output () {
-
-  // model and variational parameters
-  Theta = arma::mat(&parameter[0]  , p,d);
-  M = arma::mat(&parameter[p*d]    , n,p);
-  S = arma::mat(&parameter[p*(d+n)], n,p);
-  Z = data.O + data.X * Theta.t() + M;
-  Sigma = (M.t() * (M.each_col() % data.w) + diagmat(sum(S.each_col() % data.w, 0))) / accu(data.w) ;
-
-  // element-wise log-likelihood
-  A = exp (Z + .5 * S) ;
-  loglik = sum(data.Y % Z - A + .5*log(S) - .5*( (M * data.Omega) % M + S * diagmat(data.Omega)), 1) + .5 * data.log_det_Omega - logfact(data.Y) + .5 * p;
-}
