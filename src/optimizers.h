@@ -126,11 +126,10 @@ class optimizer_PLN_full: public optimizer_PLN {
       Rcpp::List options
     ) ;
 
-    void export_output()  ;
-    void export_var_par() ;
-    void export_sparse () ;
-
-    Rcpp::List get_var_par()    ;
+    void export_output()     ;
+    void export_var_par()    ;
+    void export_sparse ()    ;
+    Rcpp::List get_var_par() ;
 };
 
 // RANK-CONSTRAINED COVARIANCE (PCA)
@@ -157,21 +156,6 @@ class optimizer_PLN_rank: public optimizer_PLN {
 
     // matrix of scores
     arma::mat B ;
-};
-
-// SPARSE INVERSE COVARIANCE
-class optimizer_PLN_sparse: public optimizer_PLN {
-public:
-  optimizer_PLN_sparse(
-    arma::vec par,
-    const arma::mat & Y,
-    const arma::mat & X,
-    const arma::mat & O,
-    const arma::vec & w,
-    Rcpp::List options
-  ) ;
-
-  void export_output()  ;
 };
 
 #endif

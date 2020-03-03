@@ -116,9 +116,7 @@ function(responses, covariates, offsets, weights, model, control) {
     switch(control$covariance,
       "spherical" = optim_spherical,
       "diagonal"  = optim_diagonal ,
-      "full"      = optim_full     ,
-      "rank"      = optim_rank     ,
-      "sparse"    = optim_sparse
+      "full"      = optim_full
     )
   if (isPLNfit(control$inception)) {
     if (control$trace > 1) cat("\n User defined inceptive PLN model")
@@ -131,7 +129,7 @@ function(responses, covariates, offsets, weights, model, control) {
     private$Ji    <- control$inception$loglik_vec
   } else {
     if (control$trace > 1) cat("\n Use GLM Poisson to define the inceptive model")
-##    LMs   <- lapply(1:p, function(j) lm.wfit(covariates, log(1 + responses[,j]), weights, offset =  offsets[,j]) )
+    #LMs   <- lapply(1:p, function(j) lm.wfit(covariates, log(1 + responses[,j]), weights, offset =  offsets[,j]) )
     LMs   <- lapply(1:p, function(j) glm.fit(covariates, responses[,j], weights, offset =  offsets[,j],family= poisson(), intercept = FALSE))
     private$Theta <- do.call(rbind, lapply(LMs, coefficients))
     private$M     <- log(1 + responses)

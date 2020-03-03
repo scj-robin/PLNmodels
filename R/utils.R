@@ -132,7 +132,7 @@ PLN_param <- function(control, n, p, d) {
   covariance  <- ifelse(is.null(control$covariance) , "full", control$covariance)
   covariance  <- ifelse(is.null(control$inception), covariance, control$inception$vcov_model)
   ctrl <- list(
-    "ftol_out"  = 1e-5,
+    "ftol_out"  = 1e-6,
     "maxit_out" = 100,
     "algorithm"   = "CCSAQ",
     "maxeval"     = 10000  ,
@@ -199,7 +199,7 @@ PLNnetwork_param <- function(control, n, p, d, weighted = FALSE) {
   lower_bound <- ifelse(is.null(control$lower_bound), 1e-4, control$lower_bound)
   xtol_abs    <- ifelse(is.null(control$xtol_abs)   , 1e-4, control$xtol_abs)
   ctrl <-  list(
-    "ftol_out"  = 1e-5,
+    "ftol_out"  = 1e-6,
     "maxit_out" = 50,
     "penalize_diagonal" = TRUE,
     "penalty_weights"   = matrix(1, p, p),
